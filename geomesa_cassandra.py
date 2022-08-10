@@ -5,7 +5,16 @@ import os
 from pathlib import Path
 import re
 
+import argparse
 import asyncssh
+
+
+parser = argparse.ArgumentParser(description="Remove a GeoMesa schema from Cassandra (geomesa-cassandra).")
+parser.add_argument("-k", "--keyspace", help="the schema keyspace", required=True)
+parser.add_argument("-c", "--catalog", help="The schema catalog", required=True)
+parser.add_argument("-f", "--feature-name", help="The schema name", required=True)
+parser.add_argument("-l", "--log-level", help="The log level", choices=["INFO", "ERROR", "DEBUG"], default="INFO")
+args = parser.parse_args()
 
 
 CURRENT_PATH = Path(os.path.abspath(__file__))
@@ -235,9 +244,7 @@ def setup_logger(level):
 
 
 if __name__ == '__main__':
-    keyspace = 'tts'
-    catalog = 'ttscatalog'
-    schema = 'hexagg_drops'
-    setup_logger('INFO')
-    remove_geomesa_schema(keyspace, catalog, schema)
+    setup_logger(args.log_level)
+    logger.info(f"Removing schema {args.feature_name} from catalog {args.catalog} of keyspace {args.keyspace}.")
+    remove_geomesa_schema(args.keyspace, args.catalog, args.schema)
     
