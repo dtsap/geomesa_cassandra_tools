@@ -201,6 +201,9 @@ async def run_command(host, command):
         logger.debug(command)
         logger.debug(f"Output: {result.stdout}")
         logger.debug(f"Error: {result.stderr}")
+        if result.stderr:
+            logger.error(f"Command: {command}")
+            logger.error(f"Error: {result.stderr}")
         return result
 
 
@@ -231,11 +234,17 @@ def setup_logger(level):
     file_handler = RotatingFileHandler(CURRENT_PATH.parent.joinpath(f'{filename}.log'),
                                        maxBytes=10000000,
                                        backupCount=0)
+    error_file_handler = RotatingFileHandler(CURRENT_PATH.parent.joinpath(f'{filename}.error.log'),
+                                       maxBytes=10000000,
+                                       backupCount=0)    
     stream_handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
     file_handler.setFormatter(formatter)
+    error_file_handler.setFormatter(formatter)
+    error_file_handler.setLevel("ERROR")
     stream_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    logger.addHandler(error_file_handler)
     logger.addHandler(stream_handler)
     logger.setLevel(level)
 
