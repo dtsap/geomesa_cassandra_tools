@@ -1,4 +1,4 @@
 .vscode
 .python-version
 *.log
-cluster.json
+remotes.json
