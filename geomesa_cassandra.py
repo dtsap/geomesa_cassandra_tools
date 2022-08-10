@@ -27,7 +27,7 @@ def remove_geomesa_schema(keyspace, catalog, schema):
     logger.info(f'Catalog: {catalog}')
     logger.info(f'Schema: {schema}')
     seed_node = '10.148.128.236'
-    geomesa_tables = get_associated_geomesa_table_names(catalog, schema)
+    geomesa_tables = identify_schema_tables(seed_node, keyspace, catalog, schema)
     logger.info(f'Cassandra tables of schema: {", ".join(geomesa_tables)}')
     table_existence_states = tables_exist(seed_node, keyspace, geomesa_tables)
     logger.info(f'Checking tables existence ...')
@@ -44,22 +44,11 @@ def remove_geomesa_schema(keyspace, catalog, schema):
     logger.info(f'Successfully finished removal of geo-schema {schema} of {keyspace} keyspace and {catalog} catalog!')
 
 
-def get_associated_geomesa_table_names(catalog, table):
-    table_name = get_geomesa_table_name(catalog, table)
-    return [
-        f'{table_name}_id',
-        f'{table_name}_z2_v2',
-        f'{table_name}_z3_v2',
-        f'{table_name}_z2',
-        f'{table_name}_z3',
-        # f'{table_name}_xz2',
-        # f'{table_name}_xz3',
-    ]
-
-
-def get_geomesa_table_name(catalog, table):
-    table_name = table.replace('_', '_5f')
-    return f'{catalog}_{table_name}'
+def identify_schema_tables(node, keyspace, catalog, schema):
+    command = f'cqlsh {node} -e "SELECT value FROM {keyspace}.{catalog} where sft=\'{schema}\';exit;"'
+    result = asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
+    results = [value.strip() for value in result[0].stdout.split("\n")]
+    return list(filter(lambda x: x.startswith(catalog), results))
 
 
 def tables_exist(node, keyspace, tables):
@@ -211,11 +200,12 @@ def drop_table(node, keyspace, table):
 async def run_command(host, command):
     async with asyncssh.connect(host=host, port=22, username='tts', password='tts1234') as connection:
         result = await connection.run(command)
-        logger.info(75*'-')
-        logger.info(host)
-        logger.info(len(host)*'*')
-        logger.info(command)
-        logger.info(result.stdout)
+        logger.debug(75*'-')
+        logger.debug(host)
+        logger.debug(len(host)*'*')
+        logger.debug(command)
+        logger.debug("Output: {result.stdout}")
+        logger.debug("Error: {result.stderr}")
         return result
 
 
