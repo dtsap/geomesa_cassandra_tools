@@ -236,5 +236,5 @@ def setup_logger(level):
 if __name__ == '__main__':
     setup_logger(args.log_level)
     logger.info(f"Removing schema {args.feature_name} from catalog {args.catalog} of keyspace {args.keyspace}.")
-    remove_geomesa_schema(args.keyspace, args.catalog, args.schema)
+    remove_geomesa_schema(args.keyspace, args.catalog, args.feature_name)
     
