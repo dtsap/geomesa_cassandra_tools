@@ -125,8 +125,9 @@ def parse_compaction(text):
 
 
 def stop_compaction(node, compaction_id):
-    raise Exception(f'should stop compaction at {node}: {compaction_id}')
-
+    command = f'nodetool stop -id {compaction_id}'
+    return asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command, raise_error=True)))
+    
 
 def truncate_table(node, keyspace, table):
     command = f'cqlsh {node} -e "CONSISTENCY ALL;TRUNCATE {keyspace}.{table};exit;"'
@@ -191,7 +192,7 @@ def drop_table(node, keyspace, table):
     return asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
 
 
-async def run_command(host, command):
+async def run_command(host, command, raise_error=False):
     remote = get_remote(host)
     async with asyncssh.connect(host=remote["host"], port=remote["port"], username=remote["user"], password=remote["password"]) as connection:
         result = await connection.run(command)
@@ -204,6 +205,8 @@ async def run_command(host, command):
         if result.stderr:
             logger.error(f"Command: {command}")
             logger.error(f"Error: {result.stderr}")
+            if raise_error:
+                raise Exception(f'Command Error: {command}::{result.stderr}')
         return result
 
 
