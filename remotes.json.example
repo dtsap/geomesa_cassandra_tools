@@ -1,0 +1,14 @@
+{
+    "node1": {
+        "host": "10.0.0.1",
+        "port": 22,
+        "user": "john",
+        "password": "john_passowrd"
+    },
+    "node2": {
+        "host": "10.0.0.2",
+        "port": 22,
+        "user": "jane",
+        "password": "jane_passowrd"
+    }
+}

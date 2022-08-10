@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -47,7 +48,7 @@ def remove_geomesa_schema(keyspace, catalog, schema):
 def identify_schema_tables(node, keyspace, catalog, schema):
     command = f'cqlsh {node} -e "SELECT value FROM {keyspace}.{catalog} where sft=\'{schema}\';exit;"'
     result = asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
-    results = [value.strip() for value in result[0].stdout.split("\n")]
+    results = [value.strip().lower() for value in result[0].stdout.split("\n")]
     return list(filter(lambda x: x.startswith(catalog), results))
 
 
@@ -64,15 +65,8 @@ def delete_sft_from_catalog(node, keyspace, catalog, schema):
 
 def remove_table(keyspace, table):
     logger.info(f'Removing table: {keyspace}.{table}')
-    nodes = [
-        '10.148.128.236',
-        '10.148.128.238',
-        '10.148.128.239',
-        '10.148.128.240',
-        '10.148.128.241',
-        '10.148.129.16']
-    seed_node = '10.148.128.236'
-
+    nodes = get_remote_ips()
+    seed_node = nodes[0]
     flush_table(nodes, keyspace, table)
     logger.info(75*'=')
     stop_compations_of_table(nodes, keyspace, table)
@@ -198,15 +192,28 @@ def drop_table(node, keyspace, table):
 
 
 async def run_command(host, command):
-    async with asyncssh.connect(host=host, port=22, username='tts', password='tts1234') as connection:
+    remote = get_remote(host)
+    async with asyncssh.connect(host=remote["host"], port=remote["port"], username=remote["user"], password=remote["password"]) as connection:
         result = await connection.run(command)
         logger.debug(75*'-')
         logger.debug(host)
         logger.debug(len(host)*'*')
         logger.debug(command)
-        logger.debug("Output: {result.stdout}")
-        logger.debug("Error: {result.stderr}")
+        logger.debug(f"Output: {result.stdout}")
+        logger.debug(f"Error: {result.stderr}")
         return result
+
+
+def get_remotes():
+    with open("remotes.json") as fp:
+        return json.load(fp)
+
+def get_remote(name):
+    return get_remotes().get(name, None)
+
+
+def get_remote_ips():
+    return [remote["host"] for name, remote in get_remotes().items()]
 
 
 def get_output_or_raise(result):
