@@ -2,3 +2,4 @@
 .python-version
 *.log
 remotes.json
+__pycache__/
