@@ -1,1 +1,2 @@
-asyncssh
+asyncssh==2.11.0
+paramiko==2.11.0

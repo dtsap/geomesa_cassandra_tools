@@ -41,7 +41,7 @@ def remove_geomesa_schema(keyspace, catalog, schema):
         remove_table(keyspace, geomesa_table)
     
     logger.info('Deleting sft record from catalog ...')
-    delete_sft_from_catalog(seed_node, keyspace, catalog, schema)
+    # delete_sft_from_catalog(seed_node, keyspace, catalog, schema)
     logger.info(f'Successfully finished removal of geo-schema {schema} of {keyspace} keyspace and {catalog} catalog!')
 
 
@@ -81,7 +81,7 @@ def remove_table(keyspace, table):
     logger.info(75*'=')
     compact_table(nodes, keyspace, table)
     logger.info(75*'=')
-    drop_table(seed_node, keyspace, table)
+    #drop_table(seed_node, keyspace, table)
     logger.info(f'Table {keyspace}.{table} has been removed!')
 
 def flush_table(nodes, keyspace, table):
@@ -171,8 +171,10 @@ async def clear_table_snapshot(node, snapshot_name, keyspace):
 
 def repair_table(nodes, keyspace, table):
     command = f'nodetool repair -pr {keyspace} {table}'
-    tasks = (run_command(node, command) for node in nodes)
-    return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+    return [
+        asyncio.get_event_loop().run_until_complete(run_command(node, command)) 
+        for node in nodes
+    ]
 
 
 def cleanup_table(nodes, keyspace, table):
@@ -182,7 +184,7 @@ def cleanup_table(nodes, keyspace, table):
 
 
 def compact_table(nodes, keyspace, table):
-    command = f'nodetool cleanup {keyspace} {table}'
+    command = f'nodetool compact {keyspace} {table}'
     tasks = (run_command(node, command) for node in nodes)
     return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -252,8 +254,25 @@ def setup_logger(level):
     logger.setLevel(level)
 
 
+def change_ttl(keyspace, catalog, schema, ttl):
+    logger.info('Start setting the TTL to tables of geo-schema ...')
+    logger.info(f'Keyspace: {keyspace}')
+    logger.info(f'Catalog: {catalog}')
+    logger.info(f'Schema: {schema}')
+    seed_node = '10.148.128.236'
+    geomesa_tables = identify_schema_tables(seed_node, keyspace, catalog, schema)
+    for geomesa_table in geomesa_tables:
+        set_table_ttl(seed_node, keyspace, geomesa_table, ttl)
+    logger.info(f'The TTL has been set to {ttl} for schema {schema}!')
+
+
+def set_table_ttl(node, keyspace, table, ttl):
+    command = f'cqlsh {node} -e "ALTER TABLE {keyspace}.{table} WITH default_time_to_live = {ttl};"'
+    return asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
+
+
 if __name__ == '__main__':
     setup_logger(args.log_level)
     logger.info(f"Removing schema {args.feature_name} from catalog {args.catalog} of keyspace {args.keyspace}.")
-    remove_geomesa_schema(args.keyspace, args.catalog, args.feature_name)
-    
+    # remove_geomesa_schema(args.keyspace, args.catalog, args.feature_name)
+    change_ttl(args.keyspace, args.catalog, args.feature_name, 15778800)
