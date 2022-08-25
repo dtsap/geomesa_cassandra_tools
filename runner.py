@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -15,14 +16,19 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run command on a remote.")
     parser.add_argument("command", help="The command to run")
     parser.add_argument("-r", "--remote", help="The remote name", required=False)
-    parser.add_argument("-n", "--hostname", help="The remote hostname", required=False)
+    parser.add_argument("-i", "--host", help="The remote hostname", required=False)
     parser.add_argument("-p", "--port", type=int, help="The remote port", required=False)
     parser.add_argument("-u", "--username", help="The remote username", required=False)
     parser.add_argument("-w", "--password", help="The remote password", required=False)
     parser.add_argument("-l", "--log-level", help="The logging level", choices=["INFO", "ERROR", "DEBUG"], default="INFO")
     parser.add_argument("--log-file", default=f"{Path(__file__).stem}.log", help="The logging file")
     parser.add_argument("--error-log-file", default=f"{Path(__file__).stem}.error.log", help="The error logging file")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.remote and any([args.host, args.port, args.username, args.password]):
+        parser.error("Only one of the remote and custom remote can be specified.")
+    if not args.remote and not all([args.host, args.port, args.username, args.password]):
+        parser.error("All custom remote fields should be specified.")
+    return args
 
 
 async def async_run_command(command, host, port, username, password, logger):
@@ -33,7 +39,7 @@ async def async_run_command(command, host, port, username, password, logger):
     :param int port: The remote port
     :param str username: The remote username
     :param str password: The remote password
-    :param logging.Logger logger: The logger to use
+    :param logging.Logger logger: The logger object
     """
     async with asyncssh.connect(host=host, port=port, username=username, password=password) as connection:
         result = await connection.run(command)
@@ -48,7 +54,7 @@ def run_command(command, host, port, username, password, logger):
     :param int port: The remote port
     :param str username: The remote username
     :param str password: The remote password
-    :param logging.Logger logger: The logger to use
+    :param logging.Logger logger: The logger object
     """
     asyncio.get_event_loop().run_until_complete(
         async_run_command(
@@ -60,6 +66,54 @@ def run_command(command, host, port, username, password, logger):
             logger
         )
     )
+
+
+async def async_run_command_on_remote(command, remote_name, logger):
+    """Run command on a pre-defined remote asynchronously.
+
+    :param str command: The command
+    :param str remote_name: The remote name
+    :param logging.Logger logger: The logger object
+    """
+    remote = get_remote(remote_name)
+    return await async_run_command(command, remote["host"], remote["port"], remote["user"], remote["password"], logger)
+        
+
+def run_command_on_remote(command, remote_name, logger):
+    """Run command on pre-defined remote.
+
+    :param str command: The command
+    :param str remote_name: The remote name
+    :param logging.Logger logger: The logger object
+    """
+    asyncio.get_event_loop().run_until_complete(
+        async_run_command_on_remote(
+            command,
+            remote_name,
+            logger
+        )
+    )
+
+
+def read_remotes():
+    """Read remotes.
+
+    :return: The remotes
+    :rtype: list[dict]
+    """
+    with open("remotes.json") as fp:
+        return json.load(fp)
+
+
+def get_remote(name):
+    """Return remote by name.
+
+    :param str name: The remote name
+    :return: The remote
+    :rtype: dict
+    """
+    return read_remotes().get(name, None)
+
 
 def setup_logger(level, log_file, error_log_file):
     """Set up a logger.
@@ -96,11 +150,18 @@ def setup_logger(level, log_file, error_log_file):
 
 if __name__=="__main__":
     args = parse_args()
-    run_command(
-        args.command,
-        args.hostname,
-        args.port,
-        args.username,
-        args.password,
-        setup_logger(args.log_level, args.log_file, args.error_log_file)
-    )
+    if args.remote:
+        run_command_on_remote(
+            args.command,
+            args.remote,
+            setup_logger(args.log_level, args.log_file, args.error_log_file)
+        )
+    else:
+        run_command(
+            args.command,
+            args.host,
+            args.port,
+            args.username,
+            args.password,
+            setup_logger(args.log_level, args.log_file, args.error_log_file)
+        )
