@@ -31,88 +31,70 @@ def parse_args():
     return args
 
 
-async def async_run_command(command, host, port, username, password, logger):
-    """Run command on a remote asynchronously.
 
-    :param str command: The command
+class Remote:
+    """A remote machine.
+    
     :param str host: The remote host
     :param int port: The remote port
     :param str username: The remote username
     :param str password: The remote password
     :param logging.Logger logger: The logger object
     """
-    async with asyncssh.connect(host=host, port=port, username=username, password=password) as connection:
-        result = await connection.run(command)
-        logger.info(result)
+
+    def __init__(self, host, port, user, password, logger):
+        self._host = host
+        self._port = port
+        self._user = user
+        self._password = password
+        self._logger = logger
+
+    async def async_run_command(self, command):
+        """Run command asynchronously.
+
+        :param str command: The command to run
+        """
+        async with asyncssh.connect(host=self._host, port=self._port, username=self._user, password=self._password) as connection:
+            result = await connection.run(command)
+            self._logger.info(result)
 
 
-def run_command(command, host, port, username, password, logger):
-    """Run command on a remote.
+    def run(self, command):
+        """Run command.
 
-    :param str command: The command
-    :param str host: The remote host
-    :param int port: The remote port
-    :param str username: The remote username
-    :param str password: The remote password
-    :param logging.Logger logger: The logger object
-    """
-    asyncio.get_event_loop().run_until_complete(
-        async_run_command(
-            command, 
-            host, 
-            port, 
-            username, 
-            password,
-            logger
+        :param str command: The command to run
+        """
+        asyncio.get_event_loop().run_until_complete(
+            self.async_run_command(command)
         )
-    )
 
 
-async def async_run_command_on_remote(command, remote_name, logger):
-    """Run command on a pre-defined remote asynchronously.
+class NamedRemote(Remote):
 
-    :param str command: The command
-    :param str remote_name: The remote name
-    :param logging.Logger logger: The logger object
-    """
-    remote = get_remote(remote_name)
-    return await async_run_command(command, remote["host"], remote["port"], remote["user"], remote["password"], logger)
-        
+    def __init__(self, name,logger):
+        remote_data = self.get(name)
+        if not remote_data:
+            raise Exception("Remote doesn't exist!")
+        super().__init__(remote_data["host"], remote_data["port"], remote_data["user"], remote_data["password"], logger)
+    
+    def read_remotes(self):
+        """Read remotes.
 
-def run_command_on_remote(command, remote_name, logger):
-    """Run command on pre-defined remote.
-
-    :param str command: The command
-    :param str remote_name: The remote name
-    :param logging.Logger logger: The logger object
-    """
-    asyncio.get_event_loop().run_until_complete(
-        async_run_command_on_remote(
-            command,
-            remote_name,
-            logger
-        )
-    )
+        :return: The remotes
+        :rtype: list[dict]
+        """
+        with open("remotes.json") as fp:
+            return json.load(fp)
 
 
-def read_remotes():
-    """Read remotes.
+    def get(self, name):
+        """Return remote by name.
 
-    :return: The remotes
-    :rtype: list[dict]
-    """
-    with open("remotes.json") as fp:
-        return json.load(fp)
-
-
-def get_remote(name):
-    """Return remote by name.
-
-    :param str name: The remote name
-    :return: The remote
-    :rtype: dict
-    """
-    return read_remotes().get(name, None)
+        :param str name: The remote name
+        :return: The remote data
+        :rtype: dict
+        """
+        return self.read_remotes().get(name, None)
 
 
 def setup_logger(level, log_file, error_log_file):
@@ -150,18 +132,14 @@ def setup_logger(level, log_file, error_log_file):
 
 if __name__=="__main__":
     args = parse_args()
-    if args.remote:
-        run_command_on_remote(
-            args.command,
-            args.remote,
-            setup_logger(args.log_level, args.log_file, args.error_log_file)
-        )
-    else:
-        run_command(
-            args.command,
-            args.host,
-            args.port,
-            args.username,
-            args.password,
-            setup_logger(args.log_level, args.log_file, args.error_log_file)
-        )
+    remote = NamedRemote(
+        args.remote, 
+        setup_logger(args.log_level, args.log_file, args.error_log_file)
+    ) if args.remote else Remote(
+        args.host,
+        args.port,
+        args.username,
+        args.password,
+        setup_logger(args.log_level, args.log_file, args.error_log_file)
+    )
+    remote.run(args.command)
