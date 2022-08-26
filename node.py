@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument("-k", "--keyspace", help="The keyspace to use", required=False)
     parser.add_argument("-t", "--table", help="The table to use", required=False)
     parser.add_argument("-c", "--compaction-id", help="The compaction id", required=False)
+    parser.add_argument("-e", "--cql-command", help="The CQL command to run", required=False)
     parser.add_argument("-i", "--host", help="The remote hostname", required=False)
     parser.add_argument("-p", "--port", type=int, help="The remote port", required=False)
     parser.add_argument("-u", "--username", help="The remote username", required=False)
@@ -161,6 +162,9 @@ class Node(Remote):
     def compact_table(self, keyspace, table, async_=False):
         return self._run(f'nodetool compact {keyspace} {table}', async_)
 
+    def cqlsh(self, command, async_=False):
+        return self._run(f"cqlsh {self._host} -e '{command}'", async_)
+
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -291,5 +295,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         node.compact_table(args.keyspace, args.table)
+    elif args.command == "cqlsh":
+        if not args.cql_command:
+            raise argparse.error("CQL command should be specified!")
+        node.cqlsh(args.cql_command)
     else:
         node.run(args.command)

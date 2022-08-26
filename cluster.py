@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument("-f", "--nodes-file", help="The nodes file", default="remotes.json", required=False)
     parser.add_argument("-k", "--keyspace", help="The keyspace to use", required=False)
     parser.add_argument("-t", "--table", help="The table to use", required=False)
+    parser.add_argument("-e", "--cql-command", help="The CQL command to run", required=False)
     parser.add_argument("-l", "--log-level", help="The logging level", choices=["INFO", "ERROR", "DEBUG"], default="INFO")
     parser.add_argument("--log-file", default=f"{Path(__file__).stem}.log", help="The logging file")
     parser.add_argument("--error-log-file", default=f"{Path(__file__).stem}.error.log", help="The error logging file")
@@ -139,6 +140,10 @@ class Cluster:
             for node in self._nodes
         )
 
+    def cqlsh(self, command):
+        node = self.get_random_node()
+        return node.cqlsh(command)
+
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -223,5 +228,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         cluster.compact_table(args.keyspace, args.table)
+    elif args.command == "cqlsh":
+        if not args.cql_command:
+            raise argparse.error("CQL command should be specified!")
+        cluster.cqlsh(args.cql_command)
     else:
         raise Exception("Unknown command")
