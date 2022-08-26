@@ -115,6 +115,12 @@ class Cluster:
         self._logger.info(f"Found snapshots in cluster: {snapshots}")
         return snapshots
 
+    def clear_table_snapshots(self, keyspace, table):
+        return self._run(
+            node.clear_table_snapshots(keyspace, table, async_=True) 
+            for node in self._nodes
+        )
+
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -183,5 +189,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         cluster.find_table_snapshots(args.keyspace, args.table)
+    elif args.command == "clear-table-snapshots":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.clear_table_snapshots(args.keyspace, args.table)
     else:
         raise Exception("Unknown command")
