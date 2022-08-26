@@ -41,25 +41,25 @@ class Node(Remote):
     def status(self, async_=False):
         return self._run("nodetool status", async_)
 
-    def is_up(self):
+    def is_up(self, async_=False):
         result = bool(
             re.search(
             "[\w\s\S]*Gossip[\w\s\S]*true[\w\s\S]*Thrift[\w\s\S]*true[\w\s\S]*Transport[\w\s\S]*true[\w\s\S]*",
-            self.info()[0]
+            self.info(async_)[0]
         ))
         self._logger.info(result)
         return result
 
-    def restart(self):
-        self.run("sudo systemctl stop cassandra")
-        self.run("sudo systemctl start cassandra")
+    def restart(self, async_=False):
+        self._run("sudo systemctl stop cassandra", async_)
+        self._run("sudo systemctl start cassandra", async_)
         start_time = time.time()
         while time.time() - start_time < 300:
             if self.is_up():
                 return True
             time.sleep(2)
         raise TimeoutError("TimeOut occurred! Couldn't restart the node!")
-
+    
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
