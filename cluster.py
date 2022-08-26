@@ -19,6 +19,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run command on a remote.")
     parser.add_argument("command", help="The command to run")
     parser.add_argument("-f", "--nodes-file", help="The nodes file", default="remotes.json", required=False)
+    parser.add_argument("-k", "--keyspace", help="The keyspace to use", required=False)
+    parser.add_argument("-t", "--table", help="The table to use", required=False)
     parser.add_argument("-l", "--log-level", help="The logging level", choices=["INFO", "ERROR", "DEBUG"], default="INFO")
     parser.add_argument("--log-file", default=f"{Path(__file__).stem}.log", help="The logging file")
     parser.add_argument("--error-log-file", default=f"{Path(__file__).stem}.error.log", help="The error logging file")
@@ -62,6 +64,12 @@ class Cluster:
     def info(self):
         return self._run(*(
             node.info(async_=True) 
+            for node in self._nodes
+        ))
+
+    def flush_table(self, keyspace, table):
+        return self._run(*(
+            node.flush_table(keyspace, table, async_=True)
             for node in self._nodes
         ))
 
@@ -113,5 +121,9 @@ if __name__=="__main__":
         cluster.status()
     elif args.command == "info":
         cluster.info()
+    elif args.command == "flush":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.flush_table(args.keyspace, args.table)
     else:
         raise Exception("Unknown command")
