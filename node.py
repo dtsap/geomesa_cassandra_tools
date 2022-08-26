@@ -75,10 +75,6 @@ class Node(Remote):
     def compactionstats(self, async_=False):
         return self._run("nodetool compactionstats", async_)
 
-    def stop_compations_of_table(self, keyspace, table, async_=False):
-        for compaction_id in self.find_table_compactions(keyspace, table):
-            self.stop_compaction(compaction_id, async_)
-
     def find_table_compactions(self, keyspace, table, async_=False):
         if async_:
             return self.async_find_table_compactions(keyspace, table)
