@@ -86,6 +86,7 @@ class Node(Remote):
             compaction = self._parse_compaction_output(line)
             if compaction and compaction['keyspace'] == keyspace and compaction['table'] == table:
                 compactions.append(compaction['id'])
+        self._logger.info(f"Found compactions: {compactions}")
         return compactions
     
     def stop_table_compactions(self, keyspace, table, async_):
