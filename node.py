@@ -120,6 +120,8 @@ class Node(Remote):
         matches = re.match('(?P<name>[0-9a-zA-Z-_]+)\s+(?P<keyspace>[0-9a-zA-Z_]+)\s+(?P<table>[0-9a-zA-Z-_]+)', text)
         return matches.groupdict() if matches else None
 
+    def repair_table(self, keyspace, table, async_):
+        return self._run(f'nodetool repair -pr {keyspace} {table}', async_)
 
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
@@ -235,5 +237,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         node.clear_table_snapshots(args.keyspace, args.table)
+    elif args.command == "repair-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        node.repair_table(args.keyspace, args.table)
     else:
         node.run(args.command)
