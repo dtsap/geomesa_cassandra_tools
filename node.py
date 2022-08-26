@@ -8,6 +8,8 @@ import re
 import time
 import asyncssh
 
+from remote import Remote
+
 
 def parse_args():
     """Parse the script arguments.
@@ -33,53 +35,13 @@ def parse_args():
     return args
 
 
-
-class Remote:
-    """A remote machine.
-    
-    :param str host: The remote host
-    :param int port: The remote port
-    :param str username: The remote username
-    :param str password: The remote password
-    :param logging.Logger logger: The logger object
-    """
-
-    def __init__(self, host, port, user, password, logger):
-        self._host = host
-        self._port = port
-        self._user = user
-        self._password = password
-        self._logger = logger
-
-    async def async_run_command(self, command):
-        """Run command asynchronously.
-
-        :param str command: The command to run
-        """
-        async with asyncssh.connect(host=self._host, port=self._port, username=self._user, password=self._password) as connection:
-            result = await connection.run(command)
-            self._logger.info(result.stdout)
-            if result.stderr:
-                self._logger.error(result.stderr)
-            return result.stdout, result.stderr
-
-    def run(self, command):
-        """Run command.
-
-        :param str command: The command to run
-        """
-        return asyncio.get_event_loop().run_until_complete(
-            self.async_run_command(command)
-        )
-
-
 class Node(Remote):
     
-    def info(self):
-        return self.run("nodetool info")
+    def info(self, async_=False):
+        return self._run("nodetool info", async_)
 
-    def status(self):
-        return self.run("nodetool status")
+    def status(self, async_=False):
+        return self._run("nodetool status", async_)
 
     def is_active(self):
         result = bool(
@@ -99,6 +61,9 @@ class Node(Remote):
                 return True
             time.sleep(2)
         raise TimeoutError("TimeOut occurred! Couldn't restart the node!")
+
+    def _run(self, command, async_=False):
+        return self.async_run(command) if async_ else self.run(command)
 
 
 class NamedNode(Node):
