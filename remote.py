@@ -49,7 +49,7 @@ class Remote:
         self._password = password
         self._logger = logger
 
-    async def async_run_command(self, command):
+    async def async_run(self, command):
         """Run command asynchronously.
 
         :param str command: The command to run
@@ -65,7 +65,7 @@ class Remote:
         :param str command: The command to run
         """
         return asyncio.get_event_loop().run_until_complete(
-            self.async_run_command(command)
+            self.async_run(command)
         )
 
 
