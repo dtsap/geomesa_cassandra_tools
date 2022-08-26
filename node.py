@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("command", help="The command to run")
     parser.add_argument("-n", "--remote", help="The node remote", required=False)
     parser.add_argument("-k", "--keyspace", help="The keyspace to use", required=False)
+    parser.add_argument("-c", "--compaction-id", help="The compaction id", required=False)
     parser.add_argument("-table", "--table", help="The table to use", required=False)
     parser.add_argument("-i", "--host", help="The remote hostname", required=False)
     parser.add_argument("-p", "--port", type=int, help="The remote port", required=False)
@@ -95,6 +96,9 @@ class Node(Remote):
         if not matches:
             return
         return matches.groupdict()
+
+    def listsnapshots(self, async_=False):
+        return self._run("nodetool listsnapshots", async_)
 
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
@@ -188,13 +192,19 @@ if __name__=="__main__":
         node.info()
     elif args.command == "flush":
         if not all([args.keyspace, args.table]):
-            raise argparse.error("Keyspace and table should be defined!")
+            raise argparse.error("Keyspace and table should be specified!")
         node.flush_table(args.keyspace, args.table)
     elif args.command == "compactionstats":
         node.compactionstats()
     elif args.command == "find-table-compactions":
         if not all([args.keyspace, args.table]):
-            raise argparse.error("Keyspace and table should be defined!")
+            raise argparse.error("Keyspace and table should be specified!")
         node.find_table_compactions(args.keyspace, args.table)
+    elif args.command == "stop-compaction":
+        if not args.compaction_id:
+            raise argparse.error("Compaction id should be specified!")
+        node.stop_compaction(args.compaction_id)
+    elif args.command == "listsnapshots":
+        node.listsnapshots()
     else:
         node.run(args.command)
