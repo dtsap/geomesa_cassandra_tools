@@ -121,6 +121,24 @@ class Cluster:
             for node in self._nodes
         )
 
+    def repair_table(self, keyspace, table):
+        return self._run(
+            node.repair_table(keyspace, table, async_=False) 
+            for node in self._nodes
+        )
+    
+    def cleanup_table(self, keyspace, table):
+        return self._run(
+            node.cleanup_table(keyspace, table, async_=True) 
+            for node in self._nodes
+        )
+    
+    def compact_table(self, keyspace, table):
+        return self._run(
+            node.compact_table(keyspace, table, async_=True) 
+            for node in self._nodes
+        )
+
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -193,5 +211,17 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         cluster.clear_table_snapshots(args.keyspace, args.table)
+    elif args.command == "repair-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.repair_table(args.keyspace, args.table)
+    elif args.command == "cleanup-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.cleanup_table(args.keyspace, args.table)
+    elif args.command == "compact-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.compact_table(args.keyspace, args.table)
     else:
         raise Exception("Unknown command")
