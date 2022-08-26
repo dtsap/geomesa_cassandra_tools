@@ -3,3 +3,5 @@
 *.log
 remotes.json
 __pycache__/
+logs/*
+!logs/.gitkeep
