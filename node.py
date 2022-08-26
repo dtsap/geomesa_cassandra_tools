@@ -165,6 +165,18 @@ class Node(Remote):
     def cqlsh(self, command, async_=False):
         return self._run(f'cqlsh {self._host} -e "{command}"', async_)
 
+    def truncate_table(self, keyspace, table, async_=False):
+        return self.cqlsh(
+            f"CONSISTENCY ALL;TRUNCATE {keyspace}.{table};exit;",
+            async_
+        )
+
+    def table_exists(self, keyspace, table, async_=False):
+        return self.cqlsh(
+            f"CONSISTENCY ALL;TRUNCATE {keyspace}.{table};exit;",
+            async_
+        )
+
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -299,5 +311,13 @@ if __name__=="__main__":
         if not args.cql_command:
             raise argparse.error("CQL command should be specified!")
         node.cqlsh(args.cql_command)
+    elif args.command == "truncate-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        node.truncate_table(args.keyspace, args.table)
+    elif args.command == "table-exists":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        node.table_exists(args.keyspace, args.table)
     else:
         node.run(args.command)
