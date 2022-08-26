@@ -62,16 +62,22 @@ class Cluster:
         return node.status()
 
     def info(self):
-        return self._run(*(
+        return self._run(
             node.info(async_=True) 
             for node in self._nodes
-        ))
+        )
 
     def flush_table(self, keyspace, table):
-        return self._run(*(
+        return self._run(
             node.flush_table(keyspace, table, async_=True)
             for node in self._nodes
-        ))
+        )
+
+    def compactionstats(self):
+        return self._run(
+            node.compactionstats(async_=True) 
+            for node in self._nodes
+        )
 
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
@@ -125,5 +131,7 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         cluster.flush_table(args.keyspace, args.table)
+    elif args.command == "compactionstats":
+        cluster.compactionstats()
     else:
         raise Exception("Unknown command")
