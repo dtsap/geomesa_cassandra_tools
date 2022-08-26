@@ -74,6 +74,28 @@ class Node(Remote):
     def compactionstats(self, async_=False):
         return self._run("nodetool compactionstats", async_)
 
+    def stop_compations_of_table(self, keyspace, table, async_=False):
+        for compaction_id in self.find_table_compactions(keyspace, table):
+            self.stop_compaction(compaction_id, async_)
+
+    def find_table_compactions(self, keyspace, table):
+        output = self.compactionstats()[0]
+        compactions = []
+        for line in output.splitlines():
+            compaction = self._parse_compaction_output(line)
+            if compaction and compaction['keyspace'] == keyspace and compaction['table'] == table:
+                compactions.append(compaction['id'])
+        return compactions
+
+    def stop_compaction(self, compaction_id, async_=False):
+        return self._run(f"nodetool stop -id {compaction_id}", async_)
+
+    def _parse_compaction_output(self, text):
+        matches = re.match('(?P<id>[0-9a-zA-Z-_]+)\s+(?P<type>[0-9a-zA-Z_]+)\s+(?P<keyspace>[0-9a-zA-Z-_]+)\s+(?P<table>[0-9a-zA-Z-_]+)', text)
+        if not matches:
+            return
+        return matches.groupdict()
+
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -170,5 +192,9 @@ if __name__=="__main__":
         node.flush_table(args.keyspace, args.table)
     elif args.command == "compactionstats":
         node.compactionstats()
+    elif args.command == "find-table-compactions":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be defined!")
+        node.find_table_compactions(args.keyspace, args.table)
     else:
         node.run(args.command)
