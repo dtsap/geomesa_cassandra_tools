@@ -27,8 +27,8 @@ def parse_args():
     parser.add_argument("-u", "--username", help="The remote username", required=False)
     parser.add_argument("-w", "--password", help="The remote password", required=False)
     parser.add_argument("-l", "--log-level", help="The logging level", choices=["INFO", "ERROR", "DEBUG"], default="INFO")
-    parser.add_argument("--log-file", default=f"{Path(__file__).stem}.log", help="The logging file")
-    parser.add_argument("--error-log-file", default=f"{Path(__file__).stem}.error.log", help="The error logging file")
+    parser.add_argument("--log-file", default=f"logs/{Path(__file__).stem}.log", help="The logging file")
+    parser.add_argument("--error-log-file", default=f"logs/{Path(__file__).stem}.error.log", help="The error logging file")
     args = parser.parse_args()
     if args.remote and any([args.host, args.port, args.username, args.password]):
         parser.error("Only one of the remote and custom remote can be specified.")
