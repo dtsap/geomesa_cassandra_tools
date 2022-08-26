@@ -79,6 +79,18 @@ class Cluster:
             for node in self._nodes
         )
 
+    def find_table_compactions(self, keyspace, table):
+        compactions = [
+            item
+            for node_compactions in self._run(
+                node.find_table_compactions(keyspace, table, async_=True)
+                for node in self._nodes
+            )
+            for item in node_compactions
+        ]
+        self._logger.info(f"Found compactions: {compactions}")
+        return compactions
+
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -133,5 +145,9 @@ if __name__=="__main__":
         cluster.flush_table(args.keyspace, args.table)
     elif args.command == "compactionstats":
         cluster.compactionstats()
+    elif args.command == "find-table-compactions":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        cluster.find_table_compactions(args.keyspace, args.table)
     else:
         raise Exception("Unknown command")
