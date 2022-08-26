@@ -97,6 +97,12 @@ class Cluster:
             for node in self._nodes
         ]
 
+    def listsnapshots(self):
+        return self._run(
+            node.listsnapshots(async_=True) 
+            for node in self._nodes
+        )
+
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
@@ -159,5 +165,7 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         cluster.stop_table_compactions(args.keyspace, args.table)
+    elif args.command == "listsnapshots":
+        cluster.listsnapshots()
     else:
         raise Exception("Unknown command")
