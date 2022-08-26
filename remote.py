@@ -56,7 +56,9 @@ class Remote:
         """
         async with asyncssh.connect(host=self._host, port=self._port, username=self._user, password=self._password) as connection:
             result = await connection.run(command)
-            self._logger.info(result)
+            self._logger.info(f"{self._host}: {result.stdout}")
+            if result.stderr:
+                self._logger.error(f"{self._host}: {result.stderr}")
             return result.stdout, result.stderr
 
     def run(self, command):
