@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import random
 
-from node_runner import NamedNode
+from node import NamedNode
 
 
 def parse_args():
