@@ -60,9 +60,13 @@ class Cluster:
         return node.status()
 
     def info(self):
-        tasks = (node.info(async_=True) for node in self._nodes)
-        return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+        return self._run(*(
+            node.info(async_=True) 
+            for node in self._nodes
+        ))
 
+    def _run(self, tasks):
+        return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
 def setup_logger(level, log_file, error_log_file):
     """Set up a logger.
