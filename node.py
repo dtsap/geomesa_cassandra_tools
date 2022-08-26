@@ -51,15 +51,21 @@ class Node(Remote):
         return result
 
     def restart(self, async_=False):
-        self._run("sudo systemctl stop cassandra", async_)
-        self._run("sudo systemctl start cassandra", async_)
+        self.stop(async_)
+        self.start(async_)
         start_time = time.time()
         while time.time() - start_time < 300:
-            if self.is_up():
+            if self.is_up(async_):
                 return True
             time.sleep(2)
         raise TimeoutError("TimeOut occurred! Couldn't restart the node!")
     
+    def start(self, async_=False):
+        return self._run("sudo systemctl start cassandra", async_)
+
+    def stop(self, async_=False):
+        return self._run("sudo systemctl stop cassandra", async_)
+
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -140,6 +146,10 @@ if __name__=="__main__":
 
     if args.command == "restart":
         node.restart()
+    if args.command == "start":
+        node.start()
+    if args.command == "stop":
+        node.stop()
     elif args.command == "up":
         node.is_up()
     elif args.command == "status":
