@@ -51,9 +51,9 @@ class Cluster:
             node.restart()
 
     def is_up(self):
-        is_up = all([node.is_active() for node in self._nodes])
+        is_up = all([node.is_up() for node in self._nodes])
         self._logger.info(f"All nodes are up: {is_up}")
-        return all([node.is_active() for node in self._nodes])
+        return all([node.is_up() for node in self._nodes])
 
     def status(self):
         node = self.get_random_node()
