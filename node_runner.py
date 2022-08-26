@@ -4,6 +4,8 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+import re
+import time
 import asyncssh
 
 
@@ -15,7 +17,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description="Run command on a remote.")
     parser.add_argument("command", help="The command to run")
-    parser.add_argument("-r", "--remote", help="The remote name", required=False)
+    parser.add_argument("-n", "--remote", help="The node remote", required=False)
     parser.add_argument("-i", "--host", help="The remote hostname", required=False)
     parser.add_argument("-p", "--port", type=int, help="The remote port", required=False)
     parser.add_argument("-u", "--username", help="The remote username", required=False)
@@ -56,7 +58,9 @@ class Remote:
         """
         async with asyncssh.connect(host=self._host, port=self._port, username=self._user, password=self._password) as connection:
             result = await connection.run(command)
-            self._logger.info(result)
+            self._logger.info(result.stdout)
+            if result.stderr:
+                self._logger.error(result.stderr)
             return result.stdout, result.stderr
 
     def run(self, command):
@@ -69,7 +73,35 @@ class Remote:
         )
 
 
-class NamedRemote(Remote):
+class Node(Remote):
+    
+    def info(self):
+        return self.run("nodetool info")
+
+    def status(self):
+        return self.run("nodetool status")
+
+    def is_active(self):
+        result = bool(
+            re.search(
+            "[\w\s\S]*Gossip[\w\s\S]*true[\w\s\S]*Thrift[\w\s\S]*true[\w\s\S]*Transport[\w\s\S]*true[\w\s\S]*",
+            self.info()[0]
+        ))
+        self._logger.info(result)
+        return result
+
+    def restart(self):
+        self.run("sudo systemctl stop cassandra")
+        self.run("sudo systemctl start cassandra")
+        start_time = time.time()
+        while time.time() - start_time < 300:
+            if self.is_active():
+                return True
+            time.sleep(2)
+        raise TimeoutError("TimeOut occurred! Couldn't restart the node!")
+
+
+class NamedNode(Node):
 
     def __init__(self, name, logger):
         remote_data = self.get(name)
@@ -132,14 +164,25 @@ def setup_logger(level, log_file, error_log_file):
 
 if __name__=="__main__":
     args = parse_args()
-    remote = NamedRemote(
+    node = NamedNode(
         args.remote, 
         setup_logger(args.log_level, args.log_file, args.error_log_file)
-    ) if args.remote else Remote(
+    ) if args.remote else Node(
         args.host,
         args.port,
         args.username,
         args.password,
         setup_logger(args.log_level, args.log_file, args.error_log_file)
     )
-    remote.run(args.command)
+
+    if args.command == "restart":
+        node.restart()
+    elif args.command == "active":
+        node.is_active()
+    elif args.command == "status":
+        node.status()
+    elif args.command == "info":
+        node.info()
+    
+    else:
+        node.run(args.command)

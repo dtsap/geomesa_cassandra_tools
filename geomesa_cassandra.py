@@ -40,7 +40,7 @@ def remove_geomesa_schema(keyspace, catalog, schema):
     for geomesa_table in geomesa_tables:
         remove_table(keyspace, geomesa_table)
     
-    logger.info('Deleting sft record from catalog ...')
+    # logger.info('Deleting sft record from catalog ...')
     # delete_sft_from_catalog(seed_node, keyspace, catalog, schema)
     logger.info(f'Successfully finished removal of geo-schema {schema} of {keyspace} keyspace and {catalog} catalog!')
 
@@ -81,7 +81,7 @@ def remove_table(keyspace, table):
     logger.info(75*'=')
     compact_table(nodes, keyspace, table)
     logger.info(75*'=')
-    #drop_table(seed_node, keyspace, table)
+    # drop_table(seed_node, keyspace, table)
     logger.info(f'Table {keyspace}.{table} has been removed!')
 
 def flush_table(nodes, keyspace, table):
@@ -171,10 +171,12 @@ async def clear_table_snapshot(node, snapshot_name, keyspace):
 
 def repair_table(nodes, keyspace, table):
     command = f'nodetool repair -pr {keyspace} {table}'
-    return [
-        asyncio.get_event_loop().run_until_complete(run_command(node, command)) 
-        for node in nodes
-    ]
+    # return [
+    #     asyncio.get_event_loop().run_until_complete(run_command(node, command)) 
+    #     for node in nodes
+    # ]
+    tasks = (run_command(node, command) for node in nodes)
+    return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
 
 def cleanup_table(nodes, keyspace, table):
@@ -271,8 +273,25 @@ def set_table_ttl(node, keyspace, table, ttl):
     return asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
 
 
+def change_gc_grace_seconds(keyspace, catalog, schema, gc_grace_seconds):
+    logger.info('Start setting the gc_grace_seconds to tables of geo-schema ...')
+    logger.info(f'Keyspace: {keyspace}')
+    logger.info(f'Catalog: {catalog}')
+    logger.info(f'Schema: {schema}')
+    seed_node = '10.148.128.236'
+    geomesa_tables = identify_schema_tables(seed_node, keyspace, catalog, schema)
+    for geomesa_table in geomesa_tables:
+        set_table_gc_grace_seconds(seed_node, keyspace, geomesa_table, gc_grace_seconds)
+    logger.info(f'The gc_grace_seconds has been set to {gc_grace_seconds} for schema {schema}!')
+
+
+def set_table_gc_grace_seconds(node, keyspace, table, gc_grace_seconds):
+    command = f'cqlsh {node} -e "ALTER TABLE {keyspace}.{table} WITH gc_grace_seconds = {gc_grace_seconds};"'
+    return asyncio.get_event_loop().run_until_complete(asyncio.gather(run_command(node, command), return_exceptions=True))
+
+
 if __name__ == '__main__':
     setup_logger(args.log_level)
     logger.info(f"Removing schema {args.feature_name} from catalog {args.catalog} of keyspace {args.keyspace}.")
-    # remove_geomesa_schema(args.keyspace, args.catalog, args.feature_name)
-    change_ttl(args.keyspace, args.catalog, args.feature_name, 15778800)
+    remove_geomesa_schema(args.keyspace, args.catalog, args.feature_name)
+    # change_gc_grace_seconds(args.keyspace, args.catalog, args.feature_name, 1200)

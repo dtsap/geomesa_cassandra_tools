@@ -1,17 +1,16 @@
 import re
 import time
 
+from remote import Remote
 
-class Node:
 
-    def __init__(self, remote):
-        self._remote = remote
+class Node(Remote):
     
     def info(self):
-        return self._remote.run("nodetool info")
+        return self.run("nodetool info")
 
     def status(self):
-        return self._remote.run("nodetool status")
+        return self.run("nodetool status")
 
     def is_active(self):
         return bool(
@@ -21,15 +20,15 @@ class Node:
         ))
 
     def restart(self):
-        self._remote.sudo("systemctl stop cassandra")
-        self._remote.sudo("systemctl start cassandra")
+        self.sudo("systemctl stop cassandra")
+        self.sudo("systemctl start cassandra")
         start_time = time.time()
         while time.time() - start_time < 300:
             if self.is_active():
                 return True
             time.sleep(2)
-        self._remote.disconnect()
+        self.disconnect()
         raise TimeoutError("TimeOut occurred! Couldn't restart the node!")
 
     def __del__(self):
-        self._remote.disconnect()
+        self.disconnect()

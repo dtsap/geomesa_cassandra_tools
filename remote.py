@@ -97,7 +97,7 @@ class Remote:
         if not command.startswith("sudo"):
             command = "sudo -S -p '' " + command
 
-        self._logger.debug(command)
+        self._logger.info(command)
         stdin, stdout, stderr = self._client.exec_command(command)
 
         if self._connection.password and not self._connection.password.endswith('\n'):
@@ -111,6 +111,9 @@ class Remote:
         stdin.channel.shutdown_write()
         output = self._read_stream(stdout)
         error = self._read_stream(stderr)
+        self._logger.info(output)
+        if error:
+            self._logger.error(error)
         return output, error
 
     def run(self, command, input_text=None, sudo=False):
@@ -129,7 +132,7 @@ class Remote:
         if sudo:
             return self.sudo(command=command, input_text=input_text)
 
-        self._logger.debug(command)
+        self._logger.info(command)
         stdin, stdout, stderr = self._client.exec_command(command)
 
         if input_text is not None:
@@ -138,6 +141,9 @@ class Remote:
         stdin.channel.shutdown_write()
         output = self._read_stream(stdout)
         error = self._read_stream(stderr)
+        self._logger.info(output)
+        if error:
+            self._logger.error(error)
         return output, error
 
     def __del__(self):
