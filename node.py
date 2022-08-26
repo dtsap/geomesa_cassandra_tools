@@ -71,6 +71,9 @@ class Node(Remote):
     def flush_table(self, keyspace, table, async_=False):
         return self._run(f"nodetool flush -- {keyspace} {table}", async_)
 
+    def compactionstats(self, async_=False):
+        return self._run("nodetool compactionstats", async_)
+
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -165,5 +168,7 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be defined!")
         node.flush_table(args.keyspace, args.table)
+    elif args.command == "compactionstats":
+        node.compactionstats()
     else:
         node.run(args.command)
