@@ -122,7 +122,10 @@ class Node(Remote):
 
     def repair_table(self, keyspace, table, async_):
         return self._run(f'nodetool repair -pr {keyspace} {table}', async_)
-
+    
+    def cleanup_table(self, keyspace, table, async_):
+        return self._run(f'nodetool cleanup {keyspace} {table}', async_)
+    
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
 
@@ -241,5 +244,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         node.repair_table(args.keyspace, args.table)
+    elif args.command == "cleanup-table":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        node.cleanup_table(args.keyspace, args.table)
     else:
         node.run(args.command)
