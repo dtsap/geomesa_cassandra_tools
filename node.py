@@ -172,10 +172,12 @@ class Node(Remote):
         )
 
     def table_exists(self, keyspace, table, async_=False):
-        return self.cqlsh(
-            f"CONSISTENCY ALL;TRUNCATE {keyspace}.{table};exit;",
+        result = self.cqlsh(
+            f"DESCRIBE {keyspace}.{table};",
             async_
         )
+        self._logger.info(result)
+        return bool("CREATE TABLE"in result[0] and not result[1])
 
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)

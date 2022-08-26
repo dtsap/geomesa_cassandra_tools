@@ -234,4 +234,4 @@ if __name__=="__main__":
             raise argparse.error("CQL command should be specified!")
         cluster.cqlsh(args.cql_command)
     else:
-        raise Exception("Unknown command")
+        raise argparse.error("Unknown command")

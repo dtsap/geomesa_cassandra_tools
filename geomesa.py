@@ -58,6 +58,14 @@ class GeomesaNode(Node):
             f"DELETE FROM {keyspace}.{catalog} WHERE sft=\'{feature_name}\';"
         )
 
+    def schema_tables_exist(self, keyspace, catalog, feature_name):
+        result = all([
+            self.table_exists(keyspace, table)
+            for table in self.find_schema_tables(keyspace, catalog, feature_name)
+        ])
+        self._logger.info(f"All tables exist: {result}")
+        return result
+        
 
 class NamedGeomesaNode(GeomesaNode):
     
@@ -145,3 +153,9 @@ if __name__=="__main__":
         if not all([args.keyspace, args.catalog, args.feature_name]):
             raise argparse.error("Keyspace, catalog and feature name should be specified!")
         node.remove_sft_from_catalog(args.keyspace, args.catalog, args.feature_name)
+    elif args.command == "schema-tables-exist":
+        if not all([args.keyspace, args.catalog, args.feature_name]):
+            raise argparse.error("Keyspace, catalog and feature name should be specified!")
+        node.schema_tables_exist(args.keyspace, args.catalog, args.feature_name)
+    else:
+        raise argparse.error("Unknown command")
