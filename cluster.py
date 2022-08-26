@@ -147,6 +147,7 @@ class Cluster:
     def _run(self, tasks):
         return asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
 
+
 def setup_logger(level, log_file, error_log_file):
     """Set up a logger.
 

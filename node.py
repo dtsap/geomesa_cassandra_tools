@@ -163,7 +163,7 @@ class Node(Remote):
         return self._run(f'nodetool compact {keyspace} {table}', async_)
 
     def cqlsh(self, command, async_=False):
-        return self._run(f"cqlsh {self._host} -e '{command}'", async_)
+        return self._run(f'cqlsh {self._host} -e "{command}"', async_)
 
     def _run(self, command, async_=False):
         return self.async_run(command) if async_ else self.run(command)
