@@ -87,6 +87,11 @@ class Node(Remote):
             if compaction and compaction['keyspace'] == keyspace and compaction['table'] == table:
                 compactions.append(compaction['id'])
         return compactions
+    
+    def stop_table_compactions(self, keyspace, table, async_):
+        compactions = self.find_table_compactions(keyspace, table)
+        for compaction_id in compactions:
+            self.stop_compaction(compaction_id, async_)
 
     def stop_compaction(self, compaction_id, async_=False):
         return self._run(f"nodetool stop -id {compaction_id}", async_)
@@ -229,6 +234,10 @@ if __name__=="__main__":
         if not all([args.keyspace, args.table]):
             raise argparse.error("Keyspace and table should be specified!")
         node.find_table_compactions(args.keyspace, args.table)
+    elif args.command == "stop-table-compactions":
+        if not all([args.keyspace, args.table]):
+            raise argparse.error("Keyspace and table should be specified!")
+        node.stop_table_compactions(args.keyspace, args.table)
     elif args.command == "stop-compaction":
         if not args.compaction_id:
             raise argparse.error("Compaction id should be specified!")
