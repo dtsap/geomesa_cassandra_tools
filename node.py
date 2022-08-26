@@ -122,13 +122,30 @@ class Node(Remote):
         )
 
     def find_table_snapshots(self, keyspace, table, async_=False):
+        if async_:
+            return self.async_find_table_snapshots(keyspace, table)
         table_snapshots = []
-        for result in self.listsnapshots(async_):
+        results = [result for result in self.listsnapshots() if result]
+        for result in results:
             output = result[0]
             for line in output.splitlines():
                 snapshot = self._parse_snapshot(line)
                 if snapshot and snapshot["keyspace"] == keyspace and snapshot["table"] == table:
                     table_snapshots.append(snapshot["name"])
+        self._logger.info(f"Found snapshots: {table_snapshots}")
+        return table_snapshots
+    
+    async def async_find_table_snapshots(self, keyspace, table):
+        table_snapshots = []
+        results = [result for result in await self.listsnapshots(async_=True) if result]
+        for result in results:
+            self._logger.info(f"res: {result}")
+            output = result[0]
+            for line in output.splitlines():
+                snapshot = self._parse_snapshot(line)
+                if snapshot and snapshot["keyspace"] == keyspace and snapshot["table"] == table:
+                    table_snapshots.append(snapshot["name"])
+        self._logger.info(f"Found snapshots: {table_snapshots}")
         return table_snapshots
 
     def _parse_snapshot(self, text):
